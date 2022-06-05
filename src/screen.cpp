@@ -64,6 +64,9 @@
 #  define GL_RGBA_FLOAT_MODE 0x8820
 #endif
 
+/* Note older versions of GLFW, which may lack features. */
+#define NANOVG_GLFW_VERSION_FULL ((GLFW_VERSION_MAJOR * 1000) + GLFW_VERSION_MINOR)
+
 NAMESPACE_BEGIN(nanogui)
 
 std::map<GLFWwindow *, Screen *> __nanogui_screens;
@@ -187,8 +190,10 @@ Screen::Screen(const Vector2i &size, const std::string &caption, bool resizable,
 
     glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, resizable ? GL_TRUE : GL_FALSE);
+#if NANOVG_GLFW_VERSION_FULL >= 3003
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-
+#endif
+    
     for (int i = 0; i < 2; ++i) {
         if (fullscreen) {
             GLFWmonitor *monitor = glfwGetPrimaryMonitor();
@@ -377,6 +382,7 @@ Screen::Screen(const Vector2i &size, const std::string &caption, bool resizable,
         }
     );
 
+#if NANOVG_GLFW_VERSION_FULL >= 3003
     glfwSetWindowContentScaleCallback(m_glfw_window,
         [](GLFWwindow* w, float, float) {
             auto it = __nanogui_screens.find(w);
@@ -388,6 +394,7 @@ Screen::Screen(const Vector2i &size, const std::string &caption, bool resizable,
             s->resize_callback_event(s->m_size.x(), s->m_size.y());
         }
     );
+#endif
 
     initialize(m_glfw_window, true);
 
