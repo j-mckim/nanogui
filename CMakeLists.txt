@@ -60,6 +60,7 @@ set(NANOGUI_BUILD_PYTHON_DEFAULT ON)
 set(NANOGUI_BUILD_GLFW_DEFAULT ON)
 
 if (CMAKE_CXX_COMPILER MATCHES "/em\\+\\+(-[a-zA-Z0-9.])?$")
+  include(CMakePackageConfigHelpers)
   set(CMAKE_CXX_COMPILER_ID "Emscripten")
   set(NANOGUI_BUILD_SHARED_DEFAULT OFF)
   set(NANOGUI_BUILD_PYTHON_DEFAULT OFF)
@@ -92,7 +93,7 @@ option(NANOGUI_BUILD_SHARED              "Build NanoGUI as a shared library?" ${
 option(NANOGUI_BUILD_PYTHON              "Build a Python plugin for NanoGUI?" ${NANOGUI_BUILD_PYTHON_DEFAULT})
 option(NANOGUI_BUILD_GLAD                "Build GLAD OpenGL loader library? (needed on Windows)" ${NANOGUI_BUILD_GLAD_DEFAULT})
 option(NANOGUI_BUILD_GLFW                "Build GLFW?" ${NANOGUI_BUILD_GLFW_DEFAULT})
-option(NANOGUI_INSTALL                   "Install NanoGUI on `make install`?" ON)
+option(NANOGUI_INSTALL                   "Install NanoGUI on `make install`?" OFF)
 
 set(NANOGUI_NATIVE_FLAGS ${NANOGUI_NATIVE_FLAGS_DEFAULT} CACHE STRING
     "Compilation flags used to target the host processor architecture.")
