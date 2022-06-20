@@ -510,7 +510,7 @@ if build_native:
         env = env_native.Clone()
         env.AppendUnique(
             CPPDEFINES = ['NANOGUI_USE_OPENGL'],
-            CPPPATH = ['#include', '#ext/nanovg/src'],
+            CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
             CCFLAGS = ['-g', '-Og'],
             CXXFLAGS = ['-g', '-Og'],
         )
