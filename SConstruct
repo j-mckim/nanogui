@@ -504,12 +504,58 @@ if build_native:
 
     # Can env.Library() take e.g. CCFLAGS, etc.?
 
+    # FIXME - this fails to build imageview.o, with the diagnostics:
+    # 'imageview_vertex_gl' was not declared in this scope
+    # 'imageview_fragment_gl' was not declared in this scope
+    # 'imageview_vertex_gl_size' was not declared in this scope
+    # 'imageview_fragment_gl_size' was not declared in this scope
+    #
+    # These appear to part of a GL shader, not the main source
+    # code. They result from these macros:
+    # NANOGUI_SHADER(imageview_vertex), NANOGUI_SHADER(imageview_fragment)
+    #
+    # Macro NANOGUI_SHADER is defined in shader.h, three different
+    # versions, based on the target being gl, gles, or metallib
+    #
+    # Possibly the wrong version of GL is being used? Because of a
+    # missing or out-of-place include search path member?
+    #
+    # Aha - it shows up in cmake's nanogui_resources.[.h, .cpp],
+    # missing from this scons version. Need:
+    # extern const uint8_t imageview_fragment_gles[];
+    # extern uint32_t imageview_fragment_gles_size;
+    # extern const uint8_t imageview_vertex_gles[];
+    # extern uint32_t imageview_vertex_gles_size;
+
+    # These are defined in cmake's nanogui_resources.cpp; a big blob
+    # and its size. They are derived from shader source code in one
+    # of:
+    # resources/imageview_vertex.[gles, metal, gl]
+    #
+    # From cmake:
+    # /usr/bin/c++  -DNANOGUI_BUILD -DNANOGUI_SHARED -DNANOGUI_USE_OPENGL -DNVG_BUILD -DNVG_SHARED -DNVG_STB_IMAGE_IMPLEMENTATION -D_GLFW_BUILD_DLL -I/home/jim/src/nanogui/build-cmake-2 -I/home/jim/src/nanogui/include -I/home/jim/src/nanogui/ext/nanovg/src -I/home/jim/src/nanogui/ext/glfw/include  -Wall -Wextra -O3 -DNDEBUG -flto -fno-fat-lto-objects -fPIC -fvisibility=hidden   -march=nehalem -std=gnu++17 -o CMakeFiles/nanogui.dir/src/imageview.cpp.o -c /home/jim/src/nanogui/src/imageview.cpp
+    #
+    # From scons:
+    # g++ -o build_Linux_x86_64_debug/src/imageview.o -c -std=c++2a -Wextra -Wall -g -Og -Wextra -Wall -g -Og -D_GLFW_BUILD_DLL -DNANOGUI_BUILD -DNANOGUI_SHARED -DNANOGUI_USE_OPENGL -DNDEBUG -DNVG_BUILD -DNVG_SHARED -DNVG_STB_IMAGE_IMPLEMENTATION -Iinclude -Iext/nanovg/src -Ibuild_Linux_x86_64_debug/src -Isrc src/imageview.cpp
     
     if build_debug:
         print('info: building native debug target', target_name)
         env = env_native.Clone()
         env.AppendUnique(
-            CPPDEFINES = ['NANOGUI_USE_OPENGL'],
+            # CPPDEFINES = ['NANOGUI_USE_OPENGL'],
+
+            # FIXME - how many of these are needed? Deprecate the
+            # rest. Move the bunch up to the common base environment.
+            CPPDEFINES = [
+                '_GLFW_BUILD_DLL',
+                'NANOGUI_BUILD',
+                'NANOGUI_SHARED',
+                'NANOGUI_USE_OPENGL',
+                'NDEBUG',
+                'NVG_BUILD',
+                'NVG_SHARED',
+                'NVG_STB_IMAGE_IMPLEMENTATION',
+            ],
             CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
             CCFLAGS = ['-g', '-Og'],
             CXXFLAGS = ['-g', '-Og'],

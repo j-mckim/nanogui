@@ -61,14 +61,13 @@ def synthesize_resources_files(target, source, env):
             file = ngr_cxx_file)
         for b in ttf_blob:
             print('0x%02x' % (b), end = ',', file = ngr_cxx_file)
-            pass
         ttf_f.close()
         print(
             '};\n'
             'uint32_t %s_size = sizeof(%s);\n' % (ttf_id, ttf_id),
             end = '',
             file = ngr_cxx_file)
-        pass # for ttf_fname
+        pass # for ttf_fobj
     print('#endif // %s' % (cpp_guard_name), file = ngr_h_file)
     ngr_cxx_file.close()
     ngr_h_file.close()
@@ -80,7 +79,7 @@ env.Command(
     # FIXME - the targets need to be part of the dependencies
     # (i.e. source Node) for the Library(), not hard-coded here.
     target = ['src/nanogui_resources.cxx', 'src/nanogui_resources.h'],
-    source = env.Glob('resources/*.ttf'), # FIXME per target architecture
+    source = env.Glob('resources/*.ttf') + env.Glob('resources/*.gl'), # FIXME per target architecture
     action = synthesize_resources_files
     )
 
