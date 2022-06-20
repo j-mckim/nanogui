@@ -317,6 +317,12 @@ endforeach()
 # Libs.private:
 # Cflags:
 #
+# cmake find module (if separate from pkg-config)
+# LIBNANO_INCLUDE_DIRS
+# LIBNANO_LIBRARIES
+# LIBNANO_DEFINITIONS
+# LIBNANO_LIBRARY_DIRS
+#
 # git remote show origin [to fetch url]
 #
 # wrt emscripten ports, there is no obvious place to put external
@@ -465,6 +471,22 @@ libnanogui_source_files = [
     'src/window.cpp',
 ]
 
+# FIXME - caveat summation of below comment: 'scons -u' only builds
+# content at or below the current CWD. It must be invoked from the TLD
+# and/or the library must be built below the CWD.
+#
+# FIXME - this works when invoked from the TLD, creating the library
+# in the TLD. It doesn't work via 'scons -u' from a lower
+# directory. It silently compiles all the .o files but the final lib
+# is not created. A hint as to why the other Library() directives
+# fail.
+'''
+env_common.StaticLibrary(
+    target = 'xx_common_nanogui',
+    # source = ['build_Linux_x86_64_debug/src/t.cxx'] # fails, no lib
+    source = ['src/t.cxx'] # fails, no .o, no lib
+)
+'''
 
 if build_native:
     # FIXME both shared and static
@@ -598,6 +620,13 @@ if build_native:
             exports = 'env',
             duplicate = False,
             must_exist = True)
+        '''
+        env.StaticLibrary(
+            target = 'xxnanogui',
+            # source = ['build_Linux_x86_64_debug/src/t.cxx'] # fails, no lib
+            source = ['src/t.cxx'] # fails, no .o, no lib
+        )
+        '''
 
         '''
         # FIXME - below is a little problematic: feeding both nanovb
@@ -634,7 +663,6 @@ if build_native:
         #
         # FIXME - putting the above into a function might be useful
         '''
-        
         '''
         objs = []
         # Export(env) # as env
@@ -675,7 +703,7 @@ if build_native:
         # env.Install(FIXME)
         # env.InstallVersionedLib(FIXME)
         # env.Package(FIXME)
-    # FIXME finally, build python module
+    # FIXME - finally, build python module
 if build_webasm:
     print('warning: build_webasm not implemented')
     pass # FIXME temp omit

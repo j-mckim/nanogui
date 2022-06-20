@@ -83,9 +83,14 @@ env.Command(
     action = synthesize_resources_files
     )
 
-env.Library(
-    'nanogui',
-    ['src/nanogui_resources.cxx'] + env['libnanogui_sources'])
+env.StaticLibrary(
+    target = 'nanogui',
+    source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources'] # fail, no lib
+    # source = env['libnanogui_sources'] # fail, no lib
+    # source = ['src/nanogui_resources.cxx'] # fail, no lib
+    # source = ['src/xnanogui_resources.cxx'] # works, forced failure
+    # source = ['build_Linux_x86_64_debug/src/nanogui_resources.cxx'] # fails, no lib
+)
 
 # Local Variables:
 # mode: python
