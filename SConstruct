@@ -381,6 +381,8 @@ env_common = Environment(
         '-std=c++2a',
         '-Wextra',
         '-Wall'],
+    # FIXME - just for building apps
+    LINKFLAGS = [ '-Wl,--demangle' ],
 )
 
 build_debug = False
@@ -488,10 +490,37 @@ env_common.StaticLibrary(
 )
 '''
 
-if build_native:
+# FIXME regarding platform: is it better to use e.g. sys? or os? The
+# platform module is described as using values determined during the
+# last build of the Python interpreter running the script. In this
+# code, the main purpose so far is to determine what system
+# dependencies are necessary (GL libraries, etc.). These would
+# typically be established by the same source that provided the Python
+# interpreter, so in that light platform is the best choice.
+
+if False and build_native: # FIXME temp omit
+
     # FIXME both shared and static
-    target_name = platform.system() + '_' + platform.machine()
+    platform_system = platform.system()
+    target_name = platform_system + '_' + platform.machine()
     env_native = env_common.Clone()
+
+    if platform_system == 'Darwin':
+        # FIXME add libs suitable for OSX
+        pass
+    elif platform_system == 'Linux':
+        env_native.AppendUnique(
+            # Libraries needed for building examples.
+            LIBS = ['GL', 'glfw', 'pthread'],
+        )
+        pass
+    elif platform_system == 'Windows':
+        # FIXME add libs suitable for MSWin
+        pass
+    else:
+        # FIXME diagnostic, unrecognized platform
+        pass
+    
     # FIXME build python module
 
     # FIXME - slightly different invocations for glfw, nanogui
@@ -563,19 +592,48 @@ if build_native:
     if build_debug:
         print('info: building native debug target', target_name)
         env = env_native.Clone()
-        env.AppendUnique(
-            # CPPDEFINES = ['NANOGUI_USE_OPENGL'],
+        env.AppendUnique( # CPPDEFINES = ['NANOGUI_USE_OPENGL'],
 
+            # FIXME - some of the below flags are common to both debug
+            # and release. Some are common to both local and webasm.
+            
             # FIXME - how many of these are needed? Deprecate the
             # rest. Move the bunch up to the common base environment.
             CPPDEFINES = [
+                # Define if building GLFW and as part of a shared
+                # library. It appears to be
+                # Microsoft-compiler-specific. [copy CMake]
                 '_GLFW_BUILD_DLL',
+                
+                # Referenced in common.h [copy CMake]
                 'NANOGUI_BUILD',
+                
+                # Referenced in opengl.h, common.h [copy CMake]
                 'NANOGUI_SHARED',
+                
+                # Per target architecture, this or one if its kin
+                # (GLES, METAL) must be defined
                 'NANOGUI_USE_OPENGL',
+                
+                # Referenced in opengl_check.h, screen.cpp,
+                # renderpass_gl.cpp, renderpass_metal.mm [copy CMake
+                # and/or enable for debug but not for
+                # production]. Appears to enable additional error
+                # checking; macro CHK(), enables flag NVG_DEBUG. Flag
+                # NVG_DEBUG does not appear to be used; a nonce.
+                #
+                # nb - some of the error checking involves throwing an
+                # exception, so exceptions should be enabled for the
+                # webasm target.
                 'NDEBUG',
+                
+                # Not used?
                 'NVG_BUILD',
+                
+                # Not used?
                 'NVG_SHARED',
+                
+                # Not used?
                 'NVG_STB_IMAGE_IMPLEMENTATION',
             ],
             CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
@@ -613,6 +671,7 @@ if build_native:
         #
         variant_dir = 'build_' + target_name + '_debug'
         env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files
+        env['nanogui_example_sources'] = libnanogui_example_files
         env.SConscript(
             'SConscript',
             src_dir = '.',
@@ -704,9 +763,12 @@ if build_native:
         # env.InstallVersionedLib(FIXME)
         # env.Package(FIXME)
     # FIXME - finally, build python module
+    pass # build_native
+
 if build_webasm:
-    print('warning: build_webasm not implemented')
-    pass # FIXME temp omit
+    # print('warning: build_webasm not implemented')
+    # pass # FIXME temp omit
+
     # FIXME only static
 
     # FIXME - flags of interest
@@ -723,7 +785,6 @@ if build_webasm:
     # -flto (production)
     # --closure=1
 
-    
     target_name = 'emscripten_webasm'
     # The method preferred by the emscripten compiler developers for
     # determining the location of all the relevant executables is to
@@ -739,16 +800,49 @@ if build_webasm:
             # PROGSUFFIX = [".html", ".js"][1], # FIXME resolve
             RANLIB = os.path.join(em_root, 'emranlib'),
         )
+        env_webasm.AppendUnique(
+            # Libraries needed for building examples.
+            CPPDEFINES = [
+                # Referenced in common.h [copy CMake]
+                'NANOGUI_BUILD',
+                
+                # Referenced in opengl.h, common.h [copy CMake]
+                # 'NANOGUI_SHARED',
+                
+                'NANOGUI_USE_OPENGL',
+                
+                'NDEBUG', # FIXME move to build_debug
+                
+                # Not used?
+                'NVG_BUILD',
+                
+                # Not used?
+                'NVG_STB_IMAGE_IMPLEMENTATION',
+            ],
+            CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
+            LIBS = ['GL', 'glfw', 'pthread'], # FIXME probably not right; review cmake script
+        )
+        variant_dir = 'build_webasm_emscripten'
         if build_debug:
             print('info: building webasm debug target', target_name)
-            print('warning: webasm build_debug not implemented')
+            # print('warning: webasm build_debug not implemented')
             # FIXME env = env_webasm.Clone(...)
+            env = env_webasm.Clone()
+            env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files
+            env.SConscript(
+                'SConscript',
+                src_dir = '.',
+                variant_dir = variant_dir,
+                exports = 'env',
+                duplicate = False,
+                must_exist = True)
         if build_release:
             print('info: building webasm release target', target_name)
             print('warning: webasm build_release not implemented')
             # FIXME env = env_webasm.Clone(...)
     else:
         print('warning:', target_name, 'target will not be built; compiler (em++) not found')
+    pass # build_webasm
 
 # production/release
 # docs

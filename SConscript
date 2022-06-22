@@ -3,6 +3,29 @@ Import('env')
 import os
 import re
 
+def synthesize_pkg_config(target, source, env):
+    # Synthesize a pkg-config file (e.g. yadayada.pc).
+
+    # FIXME - this is based on where the files are installed; must be
+    # part of or follow the install process. Do this based on the
+    # existence of a prefix value in env?
+
+    # # comment
+    # prefix=...
+    # libdir=...
+    # includedir=...
+    # Name: ...
+    # Description: ...
+    # Version: ...
+    # URL: ...
+    # Requires: ...
+    # Conflicts: ...
+    # Libs: -L... -l...
+    # Libs.private: ...
+    # Cflags: ...
+    
+    pass # synthesize_pkg_config
+
 def synthesize_resources_files(target, source, env):
     # Synthesize the target .cxx and .h files, based on the given
     # (source) font files.
@@ -83,14 +106,44 @@ env.Command(
     action = synthesize_resources_files
     )
 
-env.StaticLibrary(
+static_lib = env.StaticLibrary(
     target = 'nanogui',
-    source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources'] # fail, no lib
-    # source = env['libnanogui_sources'] # fail, no lib
-    # source = ['src/nanogui_resources.cxx'] # fail, no lib
-    # source = ['src/xnanogui_resources.cxx'] # works, forced failure
-    # source = ['build_Linux_x86_64_debug/src/nanogui_resources.cxx'] # fails, no lib
+    # source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources']
+    source = ['src/nanogui_resources.cxx'] + env.get('libnanogui_sources', [])
 )
+
+# FIXME thoughts: may not wish to build both a static and a shared
+# library for all profiles (release, debug). For webasm, only static
+# makes sense. How best to manage this?  Not having both could also
+# complicate install and package operations. If the overhead of static
+# linking is sufficiently small, the shared library under any
+# circumstance doesn't make sense. Shared library may also require
+# PIC.
+
+# FIXME temp omit, as noted above
+False and env.SharedLibrary(
+    target = 'nanogui',
+    # source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources']
+    source = ['src/nanogui_resources.cxx'] + env.get('libnanogui_sources', [])
+)
+
+# FIXME build python module if requested
+
+example_sources = env.get('nanogui_example_sources', [])
+if example_sources:
+    env_ex = env.Clone()
+    # The example_icons program takes a long time to compile unless we
+    # request no var tracking. Ultimately, it can't be used anyways.
+    env_ex.AppendUnique(CXXFLAGS = '-fno-var-tracking')
+    for example_source in example_sources:
+        # FIXME  plus whatever compiler options, pp defines, etc.
+        # FIXME plus whatever platform-specific libraries are required
+        env_ex.Program(
+            source = example_source,
+            # FIXME - these libs should come from the target profile,
+            # not be etched in stone here.
+            LIBS = [static_lib, 'GL', 'glfw', 'pthread'], # FIXME - dup cmake
+        )
 
 # Local Variables:
 # mode: python
