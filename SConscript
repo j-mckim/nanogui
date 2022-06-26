@@ -131,19 +131,34 @@ False and env.SharedLibrary(
 
 example_sources = env.get('nanogui_example_sources', [])
 if example_sources:
+    emrun_friendly = env.get('emrun_friendly', False)
     env_ex = env.Clone()
     # The example_icons program takes a long time to compile unless we
-    # request no var tracking. Ultimately, it can't be used anyways.
+    # request no var tracking. Ultimately, tracking can't be used
+    # anyways.
     env_ex.AppendUnique(CXXFLAGS = '-fno-var-tracking')
     for example_source in example_sources:
-        # FIXME  plus whatever compiler options, pp defines, etc.
+        # FIXME plus whatever compiler options, pp defines, etc.
         # FIXME plus whatever platform-specific libraries are required
-        env_ex.Program(
-            source = example_source,
-            # FIXME - these libs should come from the target profile,
-            # not be etched in stone here.
-            LIBS = [static_lib, 'GL', 'glfw', 'pthread'], # FIXME - dup cmake
+        target = os.path.splitext(os.path.basename(example_source))[0]
+        if emrun_friendly:
+            # This only applies to emscripten/webasm. We are being
+            # directed to create a emrun-friendly webasm app; one that
+            # can be easily tested via command line 'emrun'. Append a
+            # .html suffix to the target to cause the emscripten
+            # compiler-linker to do so.
+            target += '.html'
+        print('DEBUG: source', example_source, 'target', target)
+        env_ex.PrependUnique(
+            LIBS = [
+                static_lib,
+            ],
         )
+        env_ex.Program(
+            target = target,
+            source = example_source,
+        )
+        pass # for example_source
 
 # Local Variables:
 # mode: python

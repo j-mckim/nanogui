@@ -290,28 +290,37 @@ if build_native:
         CPPDEFINES = [
             'NANOGUI_USE_METAL',
         ],
-        LIBS = [ # Libraries needed for building examples.
+        # Libraries needed only for building examples.
+        LIBS = [
+            # 'GL',
+            # 'glfw',
+            # 'pthread',
         ],
         # FIXME add libs suitable for MSWin
         if build_debug:
             print('info: building native debug target', target_name)
             env = env_native.Clone()
+            # FIXME impl
             pass # build_debug
         pass # Windows
         if build_release:
             print('info: building native release target', target_name)
             print('warning: build_release not implemented')
             env = env_native.Clone()
+            # FIXME impl
             pass # build_release
         pass # Darwin
     elif platform_system == 'Linux':
+        # env_native.ParseConfig('pkg-config --cflags --libs gl')
+        # env_native.ParseConfig('pkg-config --cflags --libs glfw3')
         env_native.AppendUnique(
             CPPDEFINES = [
                 'NANOGUI_USE_OPENGL',
                 ],
-            LIBS = [ # Libraries needed for building examples.
-                'GL',
-                'glfw',
+            # Libraries needed only for building examples.
+            LIBS = [
+                'GL', # FIXME pkg-config --libs gl
+                'glfw', # FIXME pkg-config --libs glfw3
                 'pthread',
             ],
         )
@@ -385,6 +394,7 @@ if build_native:
                 CXXFLAGS = ['-O3'],
             )
             variant_dir = 'build_' + target_name + '_release'
+            # FIXME impl
             # FIXME env = env_native.Clone(...)
             # VariantDir('build-xxx', 'src', duplicate = False)
             # env.Program([FIXME-sources])
@@ -403,11 +413,13 @@ if build_native:
         if build_debug:
             print('info: building native debug target', target_name)
             env = env_native.Clone()
+            # FIXME impl
             pass # build_debug
         if build_release:
             print('info: building native release target', target_name)
             print('warning: build_release not implemented')
             env = env_native.Clone()
+            # FIXME impl
             pass # build_release
         pass # Windows
     else:
@@ -446,6 +458,12 @@ if build_webasm:
         )
         env_webasm.AppendUnique(
             # Libraries needed for building examples.
+            CCFLAGS = [
+                '-fsanitize=undefined',
+            ],
+            CXXFLAGS = [
+                '-fsanitize=undefined',
+            ],
             CPPDEFINES = [
                 # Referenced in common.h [copy CMake]
                 'NANOGUI_BUILD',
@@ -464,15 +482,64 @@ if build_webasm:
                 'NVG_STB_IMAGE_IMPLEMENTATION',
             ],
             # CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
-            # LIBS = ['GL', 'glfw', 'pthread'], # FIXME probably not right; review cmake script
+            LINKFLAGS = [
+                '--emrun',
+                '-fsanitize=undefined',
+                '-g',
+                '-pthreads',
+                '-sLLD_REPORT_UNDEFINED',
+                '-sMIN_WEBGL_VERSION=2',
+                '-sMAX_WEBGL_VERSION=2',
+                '-sPTHREAD_POOL_SIZE=2',
+                '-sPTHREAD_POOL_SIZE_STRICT=2',
+                '-sUSE_GLFW=3',
+                ],
+            
+            # FIXME - emscripten implicitly adds libraries GL and
+            # glfw, despite my omitting them here. It further seems to
+            # ignore _any_ libraries I have specified here. This might
+            # be a scons issue; scons is using 'em++' to do the link.
+            # There is no specific 'emld' command in the emscripten
+            # suite. Libraries can be added via '-lxxx' in LINKFLAGS
+            # above. For the most part, emscripten magically figures
+            # out which libraries are needed. Raises the question: If
+            # I wish to have a private library available for my use,
+            # how best do I cause emscripten to use it?
+            #
+            # Two undefined symbols occur, in both example1 and
+            # example4:
+            #
+            # glDrawBuffer
+            # glTexImage2DMultisample
+            #
+            # glDrawBuffer may be present in libGL.a
+            # (~/upstream/emscripten/cache/sysroot/lib/wasm64-emscripten/libGL.a)
+            #
+            # glTexImage2DMultisample is declared in GL/glext.h but
+            # doesn't appear in any library (via fgrep).
+            
+            LIBS = [
+                # 'GL',
+                # 'glfw',
+                'XYZZYglfw3', # FIXME ignored
+                # 'pthread',
+                # 'SDL2',
+            ], # FIXME probably not right; review cmake script
         )
         variant_dir = 'build_webasm_emscripten'
         if build_debug:
             print('info: building webasm debug target', target_name)
             # print('warning: webasm build_debug not implemented')
-            # FIXME env = env_webasm.Clone(...)
+
+            # FIXME name example outputs with extension .html. That
+            # would be: appending .html to the executable name. Not
+            # exactly straightforward, and would have to be some more
+            # exception code in the SConscript.
+            
             env = env_webasm.Clone()
             env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files
+            env['nanogui_example_sources'] = libnanogui_example_files
+            env['emrun_friendly'] = True
             env.SConscript(
                 'SConscript',
                 src_dir = '.',
