@@ -521,7 +521,7 @@ if build_webasm:
             LIBS = [
                 # 'GL',
                 # 'glfw',
-                'XYZZYglfw3', # FIXME ignored
+                # 'XYZZYglfw3', # FIXME ignored
                 # 'pthread',
                 # 'SDL2',
             ], # FIXME probably not right; review cmake script

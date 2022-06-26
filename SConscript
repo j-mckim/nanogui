@@ -108,7 +108,6 @@ env.Command(
 
 static_lib = env.StaticLibrary(
     target = 'nanogui',
-    # source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources']
     source = ['src/nanogui_resources.cxx'] + env.get('libnanogui_sources', [])
 )
 
@@ -123,7 +122,6 @@ static_lib = env.StaticLibrary(
 # FIXME temp omit, as noted above
 False and env.SharedLibrary(
     target = 'nanogui',
-    # source = ['src/nanogui_resources.cxx'] + env['libnanogui_sources']
     source = ['src/nanogui_resources.cxx'] + env.get('libnanogui_sources', [])
 )
 
@@ -140,7 +138,8 @@ if example_sources:
     for example_source in example_sources:
         # FIXME plus whatever compiler options, pp defines, etc.
         # FIXME plus whatever platform-specific libraries are required
-        target = os.path.splitext(os.path.basename(example_source))[0]
+        # target = os.path.splitext(os.path.basename(example_source))[0]
+        target = os.path.splitext(example_source)[0]
         if emrun_friendly:
             # This only applies to emscripten/webasm. We are being
             # directed to create a emrun-friendly webasm app; one that
