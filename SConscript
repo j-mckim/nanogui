@@ -130,12 +130,13 @@ False and env.SharedLibrary(
 example_sources = env.get('nanogui_example_sources', [])
 if example_sources:
     emrun_friendly = env.get('emrun_friendly', False)
-    env_ex = env.Clone()
-    # The example_icons program takes a long time to compile unless we
-    # request no var tracking. Ultimately, tracking can't be used
-    # anyways.
-    env_ex.AppendUnique(CXXFLAGS = '-fno-var-tracking')
+    do_map = env.get('link_map', False)
     for example_source in example_sources:
+        env_ex = env.Clone()
+        # The example_icons program takes a long time to compile unless we
+        # request no var tracking. Ultimately, tracking can't be used
+        # anyways.
+        env_ex.AppendUnique(CXXFLAGS = '-fno-var-tracking')
         # FIXME plus whatever compiler options, pp defines, etc.
         # FIXME plus whatever platform-specific libraries are required
         # target = os.path.splitext(os.path.basename(example_source))[0]
@@ -153,6 +154,38 @@ if example_sources:
                 static_lib,
             ],
         )
+        if do_map:
+            # A linker map has been requested.
+            
+            # FIXME - add the flag here, using the target's name.
+            #
+            # nb - not recognized by emscripten's linker, although
+            # both clang docs and 'wasm-ld --help' indicate 'Map' is a
+            # valid option.
+            #
+            # --map_file ?
+            #
+            # emscripten's wasm-ld reports it understands --Map -
+            # which doesn't work either
+            #
+            # FIXME - not clear if this is of benefit in
+            # emscripten. As various incarnations of 'map'
+            # consistently fail, for the nonce, leave it as print-map,
+            # but avoid enabling it in SConstruct unless
+            # necessary. Possibly, this is an issue with the wrapping
+            # 'em++' script not recognizing the 'Map' flag as a valid
+            # 'wasm-ld' flag.
+        
+            env_ex.AppendUnique(
+                LINKFLAGS = [
+                    # FIXME - this is written to ~/src, not the build dir.
+                    "-Wl,-Map=" + target + '.map', # fails, 'ignoring unsupported linker flag: `-Map=FIXME.map`'
+                    # '-Wl,-Map,FIXME.map', # fails 'ignoring unsupported linker flag: `-Map`'
+                    # '-Wl,--Map=FIXME.map', # fails, 'ignoring unsupported linker flag: `--Map=FIXME.map`'
+                    # '-Wl,--map=FIXME.map', # fails, 'unknown argument: --map=FIXME.map''
+                    # '-Wl,--print-map', # works, albeit inconviently
+                ]
+            )
         env_ex.Program(
             target = target,
             source = example_source,

@@ -22,16 +22,17 @@
 #
 # CMAKE_CONFIGURATION_TYPE - not used.
 #
-# NANOGUI_MASTER_PROJECT - if True, and the python module is being
-# built, also builds docs.
+# (na) NANOGUI_MASTER_PROJECT - if True, and the python module is
+# being built, also builds docs.
 #
-# WIN32 (intrinsic) - sets NANOGUI_BUILD_GLAD_DEFAULT, adds library
-# opengl32
+# (noted) WIN32 (intrinsic) - sets NANOGUI_BUILD_GLAD_DEFAULT, adds
+# library opengl32
 #
-# NANOGUI_BUILD_GLAD - defaults to NANOGUI_BUILD_GLAD_DEFAULT. Adds
-# glad.c to the sources. For the shared lib, adds a couple CPP
-# definitions, GLAD_GLAPI_EXPORT, GLAD_GLAPI_EXPORT_BUILD. And a bit
-# more (FIXME elaborate). - nb - for win32
+# (noted) NANOGUI_BUILD_GLAD - defaults to
+# NANOGUI_BUILD_GLAD_DEFAULT. Adds glad.c to the sources. For the
+# shared lib, adds a couple CPP definitions, GLAD_GLAPI_EXPORT,
+# GLAD_GLAPI_EXPORT_BUILD. And a bit more (FIXME elaborate). - nb -
+# for win32
 #
 # NANOGUI_BUILD_GLFW - runs a chunk of code at #217. It appears this
 # compiles glfw source and adds the objects to the nanovg library.
@@ -44,10 +45,10 @@
 #
 # NANOGUI_BUILD_PYTHON - runs a chunk of code at #571. (FIXME - impl)
 #
-# From cmake webasm typescript:
-# OK NANOGUI_BUILD - should be defined
-# NANOGUI_USE_GLES - should be defined
-# NANOGUI_GLES_VERSION=2 - FIXME both gles2 and gles3 are available in em
+# (noted) From cmake webasm typescript:
+# (noted) OK NANOGUI_BUILD - should be defined
+# (noted) NANOGUI_USE_GLES - should be defined
+# (noted) NANOGUI_GLES_VERSION=2 - FIXME both gles2 and gles3 are available in em
 # or (better) - probe em to find out which is avialable
 
 # From notes-webasm.org
@@ -169,6 +170,11 @@ AddOption(
     action = 'store_true',
     help = 'Build native version(s).',
 )
+AddOption(
+    '--xdocs',
+    action = 'store_true',
+    help = 'Build the documentation.',
+)
 build_debug = False
 build_release = False
 if GetOption('xdebug'):
@@ -194,6 +200,7 @@ else:
         # neither true
         build_native = True
         build_webasm = True
+make_docs = GetOption('xdocs')
 
 
 # source files
@@ -296,7 +303,7 @@ if build_native:
             # 'glfw',
             # 'pthread',
         ],
-        # FIXME add libs suitable for MSWin
+        # FIXME add libs suitable for OSX
         if build_debug:
             print('info: building native debug target', target_name)
             env = env_native.Clone()
@@ -337,7 +344,7 @@ if build_native:
                     # Define if building GLFW and as part of a shared
                     # library. It appears to be
                     # Microsoft-compiler-specific. [copy CMake]
-                    '_GLFW_BUILD_DLL',
+                    ## '_GLFW_BUILD_DLL',
 
                     # Referenced in common.h [copy CMake]
                     'NANOGUI_BUILD',
@@ -365,9 +372,9 @@ if build_native:
                     'NVG_BUILD',
 
                     # Not used?
-                    'NVG_SHARED',
+                    ## 'NVG_SHARED',
 
-                    # Not used?
+                    # Required
                     'NVG_STB_IMAGE_IMPLEMENTATION',
                 ],
                 # CPPPATH = ['#include', '#ext/nanovg/src', 'src'],
@@ -386,25 +393,48 @@ if build_native:
                 must_exist = True)
             pass # build_debug
         if build_release:
+            # FIXME build both static and shared lib, link examples
+            # with shared lib
             print('info: building native release target', target_name)
             print('warning: build_release not implemented')
             env = env_native.Clone()
             env.AppendUnique(
                 CCFLAGS = ['-O3'],
                 CXXFLAGS = ['-O3'],
+                CPPDEFINES = [
+                    'NANOGUI_BUILD',
+                    'NANOGUI_SHARED',
+                    # Not used?
+                    'NVG_BUILD',
+                    'NVG_STB_IMAGE_IMPLEMENTATION',
+                ],
             )
             variant_dir = 'build_' + target_name + '_release'
-            # FIXME impl
-            # FIXME env = env_native.Clone(...)
-            # VariantDir('build-xxx', 'src', duplicate = False)
-            # env.Program([FIXME-sources])
-            # env.Install(FIXME)
-            # env.InstallVersionedLib(FIXME)
-            # env.Package(FIXME)
+            env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files
+            env['nanogui_example_sources'] = libnanogui_example_files
+            env.SConscript(
+                'SConscript',
+                src_dir = '.',
+                variant_dir = variant_dir,
+                exports = 'env',
+                duplicate = False,
+                must_exist = True)
             pass # build_release
         # FIXME - finally, build python module
         pass # Linux
     elif platform_system == 'Windows':
+
+        # WIN32 (intrinsic) - sets NANOGUI_BUILD_GLAD_DEFAULT, adds
+        # library opengl32
+        #
+        # NANOGUI_BUILD_GLAD - defaults to
+        # NANOGUI_BUILD_GLAD_DEFAULT. Adds glad.c to the sources. For
+        # the shared lib, adds a couple CPP definitions,
+        # GLAD_GLAPI_EXPORT, GLAD_GLAPI_EXPORT_BUILD. And a bit more
+        # (FIXME elaborate). - nb - for win32
+
+
+        
         CPPDEFINES = [
             'NANOGUI_USE_GLES',
         ],
@@ -427,6 +457,13 @@ if build_native:
         pass
 if build_webasm:
     # FIXME only static
+
+    # (noted) From cmake webasm typescript:
+    # OK NANOGUI_BUILD - should be defined
+    # NANOGUI_USE_GLES - should be defined
+    # NANOGUI_GLES_VERSION=2 - FIXME both gles2 and gles3 are
+    # available in em or (better) - probe em to find out which is
+    # avialable
 
     # FIXME - flags of interest
     # -O0 (debug)/-O3 (release) [maybe -Oz]
@@ -485,7 +522,7 @@ if build_webasm:
             LINKFLAGS = [
                 '--emrun',
                 '-fsanitize=undefined',
-                '-g',
+                '-g', # FIXME debug only
                 '-pthreads',
                 '-sLLD_REPORT_UNDEFINED',
                 '-sMIN_WEBGL_VERSION=2',
@@ -529,21 +566,14 @@ if build_webasm:
         variant_dir = 'build_webasm_emscripten'
         if build_debug:
             print('info: building webasm debug target', target_name)
-            # print('warning: webasm build_debug not implemented')
-
-            # FIXME name example outputs with extension .html. That
-            # would be: appending .html to the executable name. Not
-            # exactly straightforward, and would have to be some more
-            # exception code in the SConscript.
-            
             env = env_webasm.Clone()
-            env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files
+            env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files # FIXME common
             env['nanogui_example_sources'] = libnanogui_example_files
             env['emrun_friendly'] = True
             env.SConscript(
                 'SConscript',
                 src_dir = '.',
-                variant_dir = variant_dir,
+                variant_dir = variant_dir + '_debug',
                 exports = 'env',
                 duplicate = False,
                 must_exist = True)
@@ -551,11 +581,35 @@ if build_webasm:
         if build_release:
             print('info: building webasm release target', target_name)
             print('warning: webasm build_release not implemented')
-            # FIXME env = env_webasm.Clone(...)
+            env = env_webasm.Clone()
+            env['libnanogui_sources'] = libnanovg_source_files + libnanogui_source_files # FIXME common
+            env['nanogui_example_sources'] = libnanogui_example_files # FIXME temp for release testing
+            env['emrun_friendly'] = True # FIXME temp for release testing?
+            env.SConscript(
+                'SConscript',
+                src_dir = '.',
+                variant_dir = variant_dir + '_release',
+                exports = 'env',
+                duplicate = False,
+                must_exist = True)
             pass # build_release
     else:
         print('warning:', target_name, 'target will not be built; compiler (em++) not found')
     pass # build_webasm
+
+if make_docs:
+    # Build the documents in a couple formats. This is a simple
+    # wrapper around the makefile-based builder in ~/docs. That
+    # builder is capable of building the documents in a plentitude of
+    # different formats; this scons process only touches on a couple.
+    #
+    # NB - the process has dependencies:
+    # - breath (python module, from repo)
+    # - exhale (python module, not in repo, installed locally via pip)
+    # - sphinx_rtd_theme (not in repo, installed locally via pip)
+    # - latexmk (perl script, from repo)
+    Command(target = None, source = None, action = 'cd docs && ( make html; make latexpdf )')
+    pass # build_docs
 
 # FIXME - also via COMMAND_LINE_TARGETS
 # https://scons.org/doc/production/HTML/scons-user/ch10s03.html
